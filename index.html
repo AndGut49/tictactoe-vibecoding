@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1d0b36 0%, #070716 40%, #05040f 100%);
+      color: #f8f4ff;
+      font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+    }
+
+    .game {
+      width: min(100%, 440px);
+      background: rgba(7, 6, 23, 0.96);
+      border: 2px solid rgba(123, 63, 255, 0.8);
+      border-radius: 30px;
+      box-shadow: 0 0 60px rgba(123, 63, 255, 0.3), 0 20px 60px rgba(0, 0, 0, 0.35);
+      padding: 34px;
+      backdrop-filter: blur(6px);
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 1.8rem;
+      line-height: 1.2;
+      text-align: center;
+      color: #75f6ff;
+      text-shadow: 0 0 16px rgba(117, 246, 255, 0.5);
+    }
+
+    .status {
+      text-align: center;
+      font-size: 0.78rem;
+      margin-bottom: 18px;
+      color: #d1f9a8;
+      letter-spacing: 0.06em;
+      text-shadow: 0 0 10px rgba(209, 249, 168, 0.4);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      aspect-ratio: 1 / 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top left, rgba(137, 59, 255, 0.18), rgba(0, 0, 0, 0.65));
+      border: 2px solid rgba(117, 246, 255, 0.35);
+      border-radius: 20px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      color: #f1f9ff;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      user-select: none;
+      box-shadow: inset 0 0 18px rgba(117, 246, 255, 0.08);
+    }
+
+    .cell:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 30px rgba(117, 246, 255, 0.45), inset 0 0 18px rgba(117, 246, 255, 0.18);
+    }
+
+    .cell.disabled {
+      cursor: default;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(117, 246, 255, 0.15);
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .thanks {
+      display: block;
+      margin-top: 12px;
+      color: #9d8cff;
+      text-align: center;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 8px rgba(157, 140, 255, 0.25);
+    }
+
+    button.reset {
+      width: 100%;
+      border: 2px solid #83e0ff;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #080b20;
+      background: linear-gradient(135deg, #66efff 0%, #43b0ff 60%, #8c94ff 100%);
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+      box-shadow: 0 0 24px rgba(102, 239, 255, 0.25);
+      text-shadow: none;
+    }
+
+    button.reset:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 30px rgba(102, 239, 255, 0.45);
+      background: linear-gradient(135deg, #76ffff 0%, #59c4ff 50%, #9a9cff 100%);
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>Tic Tac Toe</h1>
+    <div class="status" id="status">Turno de X</div>
+    <div class="board" id="board" role="grid" aria-label="Tic tac toe board"></div>
+    <button class="reset" id="reset">Reiniciar juego</button>
+    <p class="thanks">Haz clic en una celda para jugar. X comienza siempre.</p>
+  </main>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const resetButton = document.getElementById('reset');
+
+    const winningLines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+
+    let board = [];
+    let currentPlayer = 'X';
+    let winner = null;
+
+    function createBoard() {
+      boardEl.innerHTML = '';
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      winner = null;
+      statusEl.textContent = 'Turno de X';
+
+      for (let index = 0; index < 9; index += 1) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cell';
+        cell.dataset.index = index;
+        cell.setAttribute('aria-label', `Celda ${index + 1}`);
+        cell.addEventListener('click', handleCellClick);
+        boardEl.appendChild(cell);
+      }
+    }
+
+    function handleCellClick(event) {
+      const index = Number(event.currentTarget.dataset.index);
+      if (board[index] || winner) {
+        return;
+      }
+
+      board[index] = currentPlayer;
+      renderBoard();
+      evaluateGame();
+
+      if (!winner) {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        statusEl.textContent = `Turno de ${currentPlayer}`;
+      }
+    }
+
+    function renderBoard() {
+      Array.from(boardEl.children).forEach((cell, index) => {
+        cell.textContent = board[index];
+        cell.classList.toggle('disabled', Boolean(board[index]) || Boolean(winner));
+      });
+    }
+
+    function evaluateGame() {
+      for (const [a, b, c] of winningLines) {
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+          winner = board[a];
+          statusEl.textContent = `Ganador: ${winner}`;
+          return;
+        }
+      }
+
+      if (board.every(cell => cell)) {
+        statusEl.textContent = 'Empate';
+      }
+    }
+
+    resetButton.addEventListener('click', createBoard);
+    createBoard();
+  </script>
+</body>
+</html>
